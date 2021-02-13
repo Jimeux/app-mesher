@@ -9,7 +9,7 @@
 ### Deploy
 
 1. Set environment variables
-```
+```bash
 make gen-env
 # Update generated .env file accordingly
 direnv allow
@@ -29,7 +29,7 @@ cd ../infra
 ```
 
 3. Deploy base infrastructure
-```
+```bash
 make deploy-vpc
 make deploy-ecs
 
@@ -43,7 +43,7 @@ make deploy-mesh
 ```
 
 4. Deploy services
-```
+```bash
 make deploy-svc-identity
 make deploy-svc-client    # <-- Depends on svc-identity
 ```
