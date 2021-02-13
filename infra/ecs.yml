@@ -13,6 +13,11 @@ Resources:
     Properties:
       ClusterName: !Ref ProjectName
 
+  # A private DNS namespace visible only inside the specified VPC. Cloud Map automatically
+  # creates a Route 53 private hosted zone with the same name as the namespace.
+  #
+  # The namespace is the value of the Name property below. The naming scheme for services
+  # will therefore be: ${ServiceName}.${ProjectName}.local
   CloudMapNamespace:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:

@@ -21,6 +21,11 @@ Parameters:
 
 Resources:
 
+  # Register a service with the private DNS namespace (CloudMapNamespace) created in ecs.yml.
+  # Allows look up of a service via DNS or AWS Cloud Map API actions, and returns
+  # one or more available endpoints that can be used to connect to the service.
+  #
+  # A reference to this is added to the ServiceRegistries property of the ECS service below.
   Registry:
     Type: AWS::ServiceDiscovery::Service
     Properties:
@@ -34,6 +39,8 @@ Resources:
       HealthCheckCustomConfig:
         FailureThreshold: 1
 
+  # The ECS service definition. Registry above is registered in the ServiceRegistries
+  # property, making service discovery for tasks in this service possible.
   Service:
     Type: AWS::ECS::Service
     Properties:
@@ -55,6 +62,8 @@ Resources:
           Subnets: !Split [ ",", { Fn::ImportValue: !Sub "${ProjectName}:PrivateSubnets" } ]
       TaskDefinition: !Ref TaskDefinition
 
+  # The task definition for the above ECS service. Here we register the ARN
+  # of the App Mesh virtual node defined in mesh.yml with Envoy.
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -136,8 +145,6 @@ Resources:
           Environment:
             - Name: APPMESH_RESOURCE_ARN
               Value: !Sub arn:aws:appmesh:${AWS::Region}:${AWS::AccountId}:mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
-            - Name: APPMESH_VIRTUAL_NODE_NAME
-              Value: !Sub mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
             - Name: ENVOY_LOG_LEVEL
               Value: info
             - Name: ENABLE_ENVOY_XRAY_TRACING

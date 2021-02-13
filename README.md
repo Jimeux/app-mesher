@@ -23,7 +23,7 @@ https://mesher.example.com/client/v1/tokens \
 HTTP 200 
 {"token":"token:mesher"}
 ```
-View on the [Service Map](https://ap-northeast-1.console.aws.amazon.com/xray/home#/service-map) on the AWS X-Ray dashboard.
+View the [Service Map](https://ap-northeast-1.console.aws.amazon.com/xray/home#/service-map) on the AWS X-Ray dashboard.
 
 ## References
 - Loosely based on the [howtogrpc](https://github.com/aws/aws-app-mesh-examples/tree/59e1d1a738346836bfe5bf589805a4f6fc777bd5/walkthroughs/howto-grpc)  example in the [aws-app-mesh-examples](https://github.com/aws/aws-app-mesh-examples) repository

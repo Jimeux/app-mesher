@@ -22,7 +22,7 @@ Resources:
       Spec:
         Backends:
           - VirtualService:
-              VirtualServiceName: !Sub svc-identity.${ProjectName}.local
+              VirtualServiceName: !GetAtt VirtualIdentityService.VirtualServiceName
         Listeners:
           - PortMapping:
               Port: 8080
@@ -33,6 +33,8 @@ Resources:
             NamespaceName: !Sub ${ProjectName}.local
             ServiceName: svc-client
 
+  # This node acts as a logical pointer to the ECS identity service.
+  # The ServiceDiscovery spec references the Registry created in services/identity.yml.
   IdentityServiceNode:
     Type: AWS::AppMesh::VirtualNode
     Properties:
@@ -55,20 +57,18 @@ Resources:
             NamespaceName: !Sub ${ProjectName}.local
             ServiceName: svc-identity
 
-  VirtualRouter:
+  VirtualIdentityRouter:
     Type: AWS::AppMesh::VirtualRouter
     Properties:
       MeshName: !GetAtt Mesh.MeshName
-      VirtualRouterName: virtual-router
+      VirtualRouterName: virtual-identity-router
       Spec:
         Listeners:
         - PortMapping:
             Port: 8080
             Protocol: grpc
 
-  VirtualService:
-    DependsOn:
-     - VirtualRouter
+  VirtualIdentityService:
     Type: AWS::AppMesh::VirtualService
     Properties:
       MeshName: !GetAtt Mesh.MeshName
@@ -76,20 +76,19 @@ Resources:
       Spec:
         Provider:
           VirtualRouter:
-            VirtualRouterName: virtual-router
+            VirtualRouterName: !GetAtt VirtualIdentityRouter.VirtualRouterName
 
-  Route:
-    DependsOn: [ VirtualRouter, IdentityServiceNode ]
+  IdentityServiceRoute:
     Type: AWS::AppMesh::Route
     Properties:
       MeshName: !GetAtt Mesh.MeshName
-      VirtualRouterName: virtual-router
-      RouteName: route
+      VirtualRouterName: !GetAtt VirtualIdentityRouter.VirtualRouterName
+      RouteName: svc-identity-route
       Spec:
         GrpcRoute:
           Action:
             WeightedTargets:
-            - VirtualNode: svc-identity
+            - VirtualNode: !GetAtt IdentityServiceNode.VirtualNodeName
               Weight: 100
           Match:
             ServiceName: identity.IdentityService
