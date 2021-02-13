@@ -1,1 +1,6 @@
+.local
+.idea
 .DS_Store
+tmp
+out
+bin
