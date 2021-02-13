@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Definitions for the identity service
+
+
+Parameters:
+  ProjectName:
+    Type: String
+  ServiceName:
+    Type: String
+    Default: svc-identity
+  EnvoyImage:
+    Type: String
+    Default: 840364872350.dkr.ecr.ap-northeast-1.amazonaws.com/aws-appmesh-envoy:v1.16.1.0-prod
+  ContainerPort:
+    Type: Number
+    Default: 8080
+  Tag:
+    Type: String
+    Default: latest
+
+
+Resources:
+
+  Registry:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: !Ref ServiceName
+      DnsConfig:
+        NamespaceId:
+          Fn::ImportValue: !Sub ${ProjectName}:CloudMapNamespaceId
+        DnsRecords:
+          - Type: A
+            TTL: 300
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster:
+        Fn::ImportValue: !Sub ${ProjectName}:ECSCluster
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      DesiredCount: 1
+      LaunchType: FARGATE
+      ServiceRegistries:
+        - RegistryArn: !GetAtt Registry.Arn
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - Fn::ImportValue:
+                !Sub ${ProjectName}:DefaultTaskSecurityGroup
+          Subnets: !Split [ ",", { Fn::ImportValue: !Sub "${ProjectName}:PrivateSubnets" } ]
+      TaskDefinition: !Ref TaskDefinition
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities:
+        - FARGATE
+      Family: !Ref ServiceName
+      NetworkMode: awsvpc
+      Cpu: "256"
+      Memory: "512"
+      TaskRoleArn:
+        Fn::ImportValue: !Sub ${ProjectName}:DefaultTaskIamRole
+      ExecutionRoleArn:
+        Fn::ImportValue: !Sub ${ProjectName}:DefaultTaskExecutionIamRole
+      ProxyConfiguration:
+        Type: APPMESH
+        ContainerName: envoy
+        ProxyConfigurationProperties:
+          - Name: IgnoredUID
+            Value: "1337"
+          - Name: ProxyIngressPort
+            Value: "15000"
+          - Name: ProxyEgressPort
+            Value: "15001"
+          - Name: AppPorts
+            Value: !Sub ${ContainerPort}
+          - Name: EgressIgnoredIPs
+            Value: '169.254.170.2,169.254.169.254'
+      ContainerDefinitions:
+        - Name: app
+          Image: !Sub
+            - ${AccountId}.dkr.ecr.${Region}.amazonaws.com/${Repository}:${Tag}
+            - AccountId: !Ref AWS::AccountId
+              Region: !Ref AWS::Region
+              Repository: { Fn::ImportValue: !Sub "${ProjectName}:IdentityServiceRepository" }
+              Tag: !Ref Tag
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Fn::ImportValue: !Sub ${ProjectName}:LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref ServiceName
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              Protocol: tcp
+          Environment:
+            - Name: MESHER_IDENTITY_HOST
+              Value: !Sub ":${ContainerPort}"
+        - Name: envoy
+          Image: !Ref EnvoyImage
+          Essential: true
+          User: "1337"
+          Ulimits:
+            - Name: nofile
+              HardLimit: 15000
+              SoftLimit: 15000
+          PortMappings:
+            - ContainerPort: 9901
+              Protocol: tcp
+            - ContainerPort: 15000
+              Protocol: tcp
+            - ContainerPort: 15001
+              Protocol: tcp
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -s http://localhost:9901/server_info | grep state | grep -q LIVE
+            Interval: 5
+            Timeout: 2
+            Retries: 3
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Fn::ImportValue: !Sub ${ProjectName}:LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Sub ${ServiceName}-envoy
+          Environment:
+            - Name: APPMESH_RESOURCE_ARN
+              Value: !Sub arn:aws:appmesh:${AWS::Region}:${AWS::AccountId}:mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
+            - Name: APPMESH_VIRTUAL_NODE_NAME
+              Value: !Sub mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
+            - Name: ENVOY_LOG_LEVEL
+              Value: info
+            - Name: ENABLE_ENVOY_XRAY_TRACING
+              Value: "true"
+        - Name: xray
+          Image: amazon/aws-xray-daemon
+          Essential: true
+          User: "1337"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Fn::ImportValue: !Sub ${ProjectName}:LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref ServiceName
+          PortMappings:
+            - ContainerPort: 2000
+              Protocol: udp

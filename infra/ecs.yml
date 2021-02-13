@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ECS cluster
+
+
+Parameters:
+  ProjectName:
+    Type: String
+
+
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref ProjectName
+
+  CloudMapNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: !Sub ${ProjectName}.local
+      Vpc:
+        Fn::ImportValue: !Sub ${ProjectName}:VPC
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub ${ProjectName}-log-group
+      RetentionInDays: 30
+
+  TaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for the tasks"
+      VpcId:
+        Fn::ImportValue: !Sub ${ProjectName}:VPC
+      SecurityGroupIngress:
+        - CidrIp:
+            Fn::ImportValue: !Sub ${ProjectName}:VPCCIDR
+          IpProtocol: "-1"
+
+  TaskIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+        - arn:aws:iam::aws:policy/AWSAppMeshEnvoyAccess
+
+  TaskExecutionIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+
+Outputs:
+  ECSCluster:
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub ${ProjectName}:ECSCluster
+  CloudMapNamespaceId:
+    Value: !GetAtt CloudMapNamespace.Id
+    Export:
+      Name: !Sub ${ProjectName}:CloudMapNamespaceId
+  LogGroup:
+    Value: !Ref LogGroup
+    Export:
+      Name: !Sub ${ProjectName}:LogGroup
+  TaskSecurityGroup:
+    Value: !Ref TaskSecurityGroup
+    Export:
+      Name: !Sub ${ProjectName}:DefaultTaskSecurityGroup
+  TaskIamRole:
+    Value: !Ref TaskIamRole
+    Export:
+      Name: !Sub ${ProjectName}:DefaultTaskIamRole
+  TaskExecutionIamRole:
+    Value: !Ref TaskExecutionIamRole
+    Export:
+      Name: !Sub ${ProjectName}:DefaultTaskExecutionIamRole

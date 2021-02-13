@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ECR repositories
+
+
+Parameters:
+  ProjectName:
+    Type: String
+
+
+Resources:
+  IdentityServiceRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-svc-identity
+
+  ClientServiceRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-svc-client
+
+
+Outputs:
+  IdentityServiceRepository:
+    Value: !Ref IdentityServiceRepository
+    Export:
+      Name: !Sub ${ProjectName}:IdentityServiceRepository
+  ClientServiceRepository:
+    Value: !Ref ClientServiceRepository
+    Export:
+      Name: !Sub ${ProjectName}:ClientServiceRepository

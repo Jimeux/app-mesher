@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "github.com/Jimeux/app-mesher/proto/rpc";
+
+package identity;
+
+service IdentityService {
+    rpc IssueToken (IssueTokenRequest) returns (IssueTokenReply) {}
+}
+
+message IssueTokenRequest {
+    string username = 1;
+}
+
+message IssueTokenReply {
+    string token = 1;
+}
