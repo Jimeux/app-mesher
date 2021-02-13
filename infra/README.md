@@ -47,3 +47,14 @@ make deploy-mesh
 make deploy-svc-identity
 make deploy-svc-client    # <-- Depends on svc-identity
 ```
+
+### Tear Down
+```bash
+make delete-svc-client
+make delete-svc-identity
+make delete-mesh
+make delete-alb
+make delete-ecs
+make delete-vpc
+make delete-ecr # May require manual deletion of repositories
+```
