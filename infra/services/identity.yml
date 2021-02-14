@@ -150,7 +150,7 @@ Resources:
               awslogs-stream-prefix: !Sub ${ServiceName}-envoy
           Environment:
             - Name: APPMESH_RESOURCE_ARN
-              Value: !Sub mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
+              Value: !Sub arn:aws:appmesh:${AWS::Region}:${AWS::AccountId}:mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
             - Name: ENVOY_LOG_LEVEL
               Value: info
             - Name: ENABLE_ENVOY_STATS_TAGS

@@ -128,7 +128,7 @@ Resources:
           HealthCheck:
             Command:
               - CMD-SHELL
-              - curl -s http://localhost:9901/server_info | cut -d' ' -f3 | grep -q live
+              - curl -s http://localhost:9901/server_info | grep state | grep -q LIVE
             Interval: 5
             Timeout: 2
             Retries: 3
@@ -141,7 +141,7 @@ Resources:
               awslogs-stream-prefix: !Sub ${ServiceName}-envoy
           Environment:
             - Name: APPMESH_RESOURCE_ARN
-              Value: !Sub mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
+              Value: !Sub arn:aws:appmesh:${AWS::Region}:${AWS::AccountId}:mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
             - Name: ENVOY_LOG_LEVEL
               Value: info
             - Name: ENABLE_ENVOY_STATS_TAGS
