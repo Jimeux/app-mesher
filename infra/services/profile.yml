@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Client service
+Description: Profile service
 
 
 Parameters:
@@ -7,7 +7,7 @@ Parameters:
     Type: String
   ServiceName:
     Type: String
-    Default: svc-client
+    Default: svc-profile
   EnvoyImage:
     Type: String
     Default: 840364872350.dkr.ecr.ap-northeast-1.amazonaws.com/aws-appmesh-envoy:v1.16.1.0-prod
@@ -21,44 +21,10 @@ Parameters:
 
 Resources:
 
-  TargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      VpcId:
-        Fn::ImportValue: !Sub ${ProjectName}:VPC
-      Port: 8080
-      Protocol: HTTP
-      Matcher:
-        HttpCode: 200-299
-      HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /client/
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 2
-      TargetType: ip
-      Name: !Sub ${ProjectName}-${ServiceName}-target
-      TargetGroupAttributes:
-        - Key: deregistration_delay.timeout_seconds
-          Value: "30"
-
-  ListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      ListenerArn:
-        Fn::ImportValue: !Sub ${ProjectName}:LoadBalancerListener
-      Priority: 1
-      Conditions:
-        - Field: path-pattern
-          Values:
-            - /client/*
-      Actions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
-
   Registry:
     Type: AWS::ServiceDiscovery::Service
     Properties:
-      Name: svc-client
+      Name: !Ref ServiceName
       DnsConfig:
         NamespaceId:
           Fn::ImportValue: !Sub ${ProjectName}:CloudMapNamespaceId
@@ -70,7 +36,6 @@ Resources:
 
   Service:
     Type: AWS::ECS::Service
-    DependsOn: [ ListenerRule ]
     Properties:
       Cluster:
         Fn::ImportValue: !Sub ${ProjectName}:ECSCluster
@@ -85,13 +50,10 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
           SecurityGroups:
-            - { Fn::ImportValue: !Sub "${ProjectName}:DefaultTaskSecurityGroup" }
+            - Fn::ImportValue:
+                !Sub ${ProjectName}:DefaultTaskSecurityGroup
           Subnets: !Split [ ",", { Fn::ImportValue: !Sub "${ProjectName}:PrivateSubnets" } ]
       TaskDefinition: !Ref TaskDefinition
-      LoadBalancers:
-        - ContainerName: app
-          ContainerPort: !Ref ContainerPort
-          TargetGroupArn: !Ref TargetGroup
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -119,14 +81,14 @@ Resources:
           - Name: AppPorts
             Value: !Sub ${ContainerPort}
           - Name: EgressIgnoredIPs
-            Value: "169.254.170.2,169.254.169.254"
+            Value: '169.254.170.2,169.254.169.254'
       ContainerDefinitions:
         - Name: app
           Image: !Sub
             - ${AccountId}.dkr.ecr.${Region}.amazonaws.com/${Repository}:${Tag}
             - AccountId: !Ref AWS::AccountId
               Region: !Ref AWS::Region
-              Repository: { Fn::ImportValue: !Sub "${ProjectName}:ClientServiceRepository" }
+              Repository: { Fn::ImportValue: !Sub "${ProjectName}:ProfileServiceRepository" }
               Tag: !Ref Tag
           Essential: true
           DependsOn:
@@ -143,20 +105,18 @@ Resources:
             - ContainerPort: !Ref ContainerPort
               Protocol: tcp
           Environment:
-            - Name: MESHER_CLIENT_PORT
-              Value: !Sub ${ContainerPort}
-            # FIXME hardcoded service names
-            - Name: MESHER_IDENTITY_HOST
-              Value: !Sub svc-identity.${ProjectName}.local:${ContainerPort}
             - Name: MESHER_PROFILE_HOST
-              Value: !Sub svc-profile.${ProjectName}.local:${ContainerPort}
+              Value: !Sub ":${ContainerPort}"
+            # FIXME hardcoded servic names
+            - Name: MESHER_PII_HOST
+              Value: !Sub svc-pii.${ProjectName}.local:${ContainerPort}
         - Name: envoy
           Image: !Ref EnvoyImage
           Essential: true
           DependsOn:
             - ContainerName: xray
               Condition: START
-          User: '1337'
+          User: "1337"
           Ulimits:
             - Name: nofile
               HardLimit: 15000

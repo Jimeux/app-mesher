@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: AppMesh defintitions
+Description: AppMesh service mesh
 
 
 Parameters:
@@ -23,6 +23,8 @@ Resources:
         Backends:
           - VirtualService:
               VirtualServiceName: !GetAtt VirtualIdentityService.VirtualServiceName
+          - VirtualService:
+              VirtualServiceName: !GetAtt VirtualProfileService.VirtualServiceName
         Listeners:
           - PortMapping:
               Port: 8080
@@ -93,3 +95,70 @@ Resources:
           Match:
             ServiceName: identity.IdentityService
             # MethodName: IssueToken # Can restrict to specific methods
+
+  PIIServiceNode:
+    Type: AWS::AppMesh::VirtualNode
+    Properties:
+      MeshName: !GetAtt Mesh.MeshName
+      VirtualNodeName: svc-pii
+      Spec:
+        Listeners:
+          - PortMapping:
+              Port: 8080
+              Protocol: grpc
+            HealthCheck:
+              HealthyThreshold: 2
+              IntervalMillis: 5000
+              TimeoutMillis: 2000
+              UnhealthyThreshold: 3
+              Port: 8080
+              Protocol: grpc
+        ServiceDiscovery:
+          AWSCloudMap:
+            NamespaceName: !Sub ${ProjectName}.local
+            ServiceName: svc-pii
+
+  VirtualPIIService:
+    Type: AWS::AppMesh::VirtualService
+    Properties:
+      MeshName: !GetAtt Mesh.MeshName
+      VirtualServiceName: !Sub svc-pii.${ProjectName}.local
+      Spec:
+        Provider:
+          VirtualNode:
+            VirtualNodeName: !GetAtt PIIServiceNode.VirtualNodeName
+
+  ProfileServiceNode:
+    Type: AWS::AppMesh::VirtualNode
+    Properties:
+      MeshName: !GetAtt Mesh.MeshName
+      VirtualNodeName: svc-profile
+      Spec:
+        Backends:
+          - VirtualService:
+              VirtualServiceName: !GetAtt VirtualPIIService.VirtualServiceName
+        Listeners:
+        - PortMapping:
+            Port: 8080
+            Protocol: grpc
+          HealthCheck:
+            HealthyThreshold: 2
+            IntervalMillis: 5000
+            TimeoutMillis: 2000
+            UnhealthyThreshold: 3
+            Port: 8080
+            Protocol: grpc
+        ServiceDiscovery:
+          AWSCloudMap:
+            NamespaceName: !Sub ${ProjectName}.local
+            ServiceName: svc-profile
+
+  VirtualProfileService:
+    Type: AWS::AppMesh::VirtualService
+    Properties:
+      MeshName: !GetAtt Mesh.MeshName
+      VirtualServiceName: !Sub svc-profile.${ProjectName}.local
+      Spec:
+        Provider:
+          VirtualNode:
+            VirtualNodeName: !GetAtt ProfileServiceNode.VirtualNodeName

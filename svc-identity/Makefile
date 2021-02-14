@@ -6,7 +6,7 @@ run:
 	go run main.go
 
 d-build:
-	docker build -t $(PROJECT)-$(SERVICE) . --build-arg SERVICE=$(SERVICE)
+	docker build --no-cache -t $(PROJECT)-$(SERVICE) . --build-arg SERVICE=$(SERVICE)
 
 d-push: REGION = $(shell aws configure get region)
 d-push: ACCOUNT = $(shell aws sts get-caller-identity | jq -r '.Account')

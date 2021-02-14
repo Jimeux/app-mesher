@@ -12,10 +12,14 @@ import (
 type TokenHandler struct {
 	Handler
 	identitySvc rpc.IdentityServiceClient
+	profileSvc  rpc.ProfileServiceClient
 }
 
-func NewTokenHandler(identitySvc rpc.IdentityServiceClient) *TokenHandler {
-	return &TokenHandler{identitySvc: identitySvc}
+func NewTokenHandler(identitySvc rpc.IdentityServiceClient, profileSvc rpc.ProfileServiceClient) *TokenHandler {
+	return &TokenHandler{
+		identitySvc: identitySvc,
+		profileSvc:  profileSvc,
+	}
 }
 
 func (h *TokenHandler) GetToken(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +29,7 @@ func (h *TokenHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reply, err := h.identitySvc.IssueToken(r.Context(), &rpc.IssueTokenRequest{
+	identityReply, err := h.identitySvc.IssueToken(r.Context(), &rpc.IssueTokenRequest{
 		Username: req.Username,
 	})
 	if err != nil {
@@ -33,7 +37,17 @@ func (h *TokenHandler) GetToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	profileReply, err := h.profileSvc.GetProfile(r.Context(), &rpc.GetProfileRequest{
+		Id: req.ID,
+	})
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+
 	h.writeJSON(w, r, responses.TokenGet{
-		Token: reply.GetToken(),
+		Token:   identityReply.GetToken(),
+		Profile: profileReply.GetProfile(),
+		Data:    profileReply.GetData(),
 	})
 }

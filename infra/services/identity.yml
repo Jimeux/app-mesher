@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Definitions for the identity service
+Description: Identity service
 
 
 Parameters:
@@ -100,6 +100,9 @@ Resources:
               Repository: { Fn::ImportValue: !Sub "${ProjectName}:IdentityServiceRepository" }
               Tag: !Ref Tag
           Essential: true
+          DependsOn:
+            - ContainerName: envoy
+              Condition: HEALTHY
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -116,6 +119,9 @@ Resources:
         - Name: envoy
           Image: !Ref EnvoyImage
           Essential: true
+          DependsOn:
+            - ContainerName: xray
+              Condition: START
           User: "1337"
           Ulimits:
             - Name: nofile
@@ -144,9 +150,11 @@ Resources:
               awslogs-stream-prefix: !Sub ${ServiceName}-envoy
           Environment:
             - Name: APPMESH_RESOURCE_ARN
-              Value: !Sub arn:aws:appmesh:${AWS::Region}:${AWS::AccountId}:mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
+              Value: !Sub mesh/${ProjectName}-mesh/virtualNode/${ServiceName}
             - Name: ENVOY_LOG_LEVEL
               Value: info
+            - Name: ENABLE_ENVOY_STATS_TAGS
+              Value: "1"
             - Name: ENABLE_ENVOY_XRAY_TRACING
               Value: "true"
         - Name: xray

@@ -20,19 +20,29 @@ import (
 func main() {
 	conf := config.New()
 
-	conn, err := grpc.Dial(conf.Server.IdentityHost,
+	identityConn, err := grpc.Dial(conf.Server.IdentityHost,
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 	)
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("could not connect to identity svc: %v", err)
 	}
-	defer conn.Close()
+	defer identityConn.Close()
 
-	identitySvc := rpc.NewIdentityServiceClient(conn)
+	profileConn, err := grpc.Dial(conf.Server.ProfileHost,
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		log.Fatalf("could not connect to profile svc: %v", err)
+	}
+	defer profileConn.Close()
+
+	identitySvc := rpc.NewIdentityServiceClient(identityConn)
+	profileSvc := rpc.NewProfileServiceClient(profileConn)
 
 	handler := router.Init(&router.Handlers{
-		Token: handlers.NewTokenHandler(identitySvc),
+		Token: handlers.NewTokenHandler(identitySvc, profileSvc),
 	})
 
 	server := &http.Server{

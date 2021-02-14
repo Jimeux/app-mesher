@@ -22,6 +22,12 @@ make deploy-ecr
 cd ../svc-client
 make d-push
 
+cd ../svc-pii
+make d-push
+
+cd ../svc-profile
+make d-push
+
 cd ../svc-identity
 make d-push
 
@@ -44,14 +50,18 @@ make deploy-mesh
 
 4. Deploy services
 ```bash
+make deploy-svc-pii
 make deploy-svc-identity
-make deploy-svc-client    # <-- Depends on svc-identity
+make deploy-svc-profile   # <-- Depends on svc-pii
+make deploy-svc-client    # <-- Depends on svc-identity & svc-profile
 ```
 
 ### Tear Down
 ```bash
 make delete-svc-client
+make delete-svc-profile
 make delete-svc-identity
+make delete-svc-pii
 make delete-mesh
 make delete-alb
 make delete-ecs

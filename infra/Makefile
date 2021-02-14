@@ -84,6 +84,28 @@ delete-svc-identity:
 	aws cloudformation delete-stack --stack-name $(PROJECT)-svc-identity
 
 
+# PII Service
+deploy-svc-pii:
+	aws cloudformation deploy \
+--template-file ./services/pii.yml \
+--stack-name $(PROJECT)-svc-pii \
+--parameter-overrides "ProjectName=$(PROJECT)"
+
+delete-svc-pii:
+	aws cloudformation delete-stack --stack-name $(PROJECT)-svc-pii
+
+
+# Profile Service
+deploy-svc-profile:
+	aws cloudformation deploy \
+--template-file ./services/profile.yml \
+--stack-name $(PROJECT)-svc-profile \
+--parameter-overrides "ProjectName=$(PROJECT)"
+
+delete-svc-profile:
+	aws cloudformation delete-stack --stack-name $(PROJECT)-svc-profile
+
+
 # Client Service
 deploy-svc-client:
 	aws cloudformation deploy \

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "github.com/Jimeux/app-mesher/proto/rpc";
+
+package pii;
+
+service PIIService {
+    rpc GetData (GetDataRequest) returns (GetDataReply) {}
+}
+
+message GetDataRequest {
+    int64 id = 1;
+}
+
+message GetDataReply {
+    string data = 1;
+}

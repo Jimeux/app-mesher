@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "github.com/Jimeux/app-mesher/proto/rpc";
+
+package profile;
+
+service ProfileService {
+    rpc GetProfile (GetProfileRequest) returns (GetProfileReply) {
+    }
+}
+
+message GetProfileRequest {
+    int64 id = 1;
+}
+
+message GetProfileReply {
+    string profile = 1;
+    string data = 2;
+}

@@ -13,6 +13,16 @@ Resources:
     Properties:
       RepositoryName: !Sub ${ProjectName}-svc-identity
 
+  PIIServiceRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-svc-pii
+
+  ProfileServiceRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${ProjectName}-svc-profile
+
   ClientServiceRepository:
     Type: AWS::ECR::Repository
     Properties:
@@ -24,6 +34,14 @@ Outputs:
     Value: !Ref IdentityServiceRepository
     Export:
       Name: !Sub ${ProjectName}:IdentityServiceRepository
+  PIIServiceRepository:
+    Value: !Ref PIIServiceRepository
+    Export:
+      Name: !Sub ${ProjectName}:PIIServiceRepository
+  ProfileServiceRepository:
+    Value: !Ref ProfileServiceRepository
+    Export:
+      Name: !Sub ${ProjectName}:ProfileServiceRepository
   ClientServiceRepository:
     Value: !Ref ClientServiceRepository
     Export:

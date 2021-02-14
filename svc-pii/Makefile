@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 PROJECT := mesher
-SERVICE := svc-client
+SERVICE := svc-pii
 
 run:
 	go run main.go
